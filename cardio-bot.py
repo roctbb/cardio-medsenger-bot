@@ -205,7 +205,6 @@ def send(contract_id):
     }
     try:
         requests.post(MAIN_HOST + '/api/agents/message', json=data)
-        print('sent to ' + contract_id)
     except Exception as e:
         print('connection error', e)
 

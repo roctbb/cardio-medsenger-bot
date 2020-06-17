@@ -14,9 +14,9 @@
         <div class="form-group">
             <strong>Частота отправки опросника:</strong>
             <select name="mode" class="form-control">
-                <option value="once"{% if contract.mode == 0 %} selected {% endif %}>Раз в сутки</option>
-                <option value="double"{% if contract.mode == 1 %} selected {% endif %}>Раз в три дня</option>
-                <option value="triple"{% if contract.mode == 2 %} selected {% endif %}>Раз в неделю</option>
+                <option value="0"{% if contract.mode == 0 %} selected {% endif %}>Раз в сутки</option>
+                <option value="1"{% if contract.mode == 1 %} selected {% endif %}>Раз в три дня</option>
+                <option value="2"{% if contract.mode == 2 %} selected {% endif %}>Раз в неделю</option>
             </select>
         </div>
         <div class="form-group">
