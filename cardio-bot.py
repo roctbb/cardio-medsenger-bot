@@ -224,7 +224,7 @@ def send_warning(contract_id, a):
         "contract_id": contract_id,
         "api_key": APP_KEY,
         "message": {
-            "text": "У пациента наблюдаются вероятные симптомы COVID 19 ({}).".format(', '.join(a)),
+            "text": "У пациента наблюдаются вероятные симптомы сердечной недостаточности ({}).".format(' / '.join(a)),
             "is_urgent": True,
             "only_doctor": True,
             "need_answer": True
@@ -297,23 +297,59 @@ def action_save():
 
     answer = Answer()
     answer.contract_id = contract_id
-    answer.big1 = request.form.get('big1', False) == 'warning'
-    answer.big2 = request.form.get('big2', False) == 'warning'
-    answer.big3 = request.form.get('big3', False) == 'warning'
-    answer.big4 = request.form.get('big4', False) == 'warning'
-    answer.big5 = request.form.get('big5', False) == 'warning'
-    answer.big6 = request.form.get('big6', False) == 'warning'
-    answer.big7 = request.form.get('big7', False) == 'warning'
-    answer.small1 = request.form.get('small1', False) == 'warning'
-    answer.small2 = request.form.get('small2', False) == 'warning'
-    answer.small3 = request.form.get('small3', False) == 'warning'
-    answer.small4 = request.form.get('small4', False) == 'warning'
-    answer.small5 = request.form.get('small5', False) == 'warning'
-    answer.small6 = request.form.get('small6', False) == 'warning'
+
+    big_warnings = []
+    small_warnings = []
+
+    if request.form.get('big1', False) == 'warning':
+        answer.big1 = True
+        big_warnings.append('одышка при ранее привычной физической нагрузке')
+    if request.form.get('big2', False) == 'warning':
+        answer.big2 = True
+        big_warnings.append('жалобы на одышку в положение лежа')
+    if request.form.get('big3', False) == 'warning':
+        answer.big3 = True
+        big_warnings.append('приступы ночной одышки')
+    if request.form.get('big4', False) == 'warning':
+        answer.big4 = True
+        big_warnings.append('физическая нагрузка дается тяжелее, чем ранее')
+    if request.form.get('big5', False) == 'warning':
+        answer.big5 = True
+        big_warnings.append('слабость, повышенная утомляемость, необходимость в более продолжительном отдыхе')
+    if request.form.get('big6', False) == 'warning':
+        answer.big6 = True
+        big_warnings.append('отечность голеней, увеличение в объеме лодыжек')
+    if request.form.get('big7', False) == 'warning':
+        answer.big7 = True
+        big_warnings.append('увеличилась ли окружность талии')
+
+    if request.form.get('small1', False) == 'warning':
+        answer.small1 = True
+        small_warnings.append('ночной кашель')
+    if request.form.get('small2', False) == 'warning':
+        answer.small2 = True
+        small_warnings.append('увеличение веса на 2 кг')
+    if request.form.get('small3', False) == 'warning':
+        answer.small3 = True
+        small_warnings.append('увеличение веса на 1 кг')
+    if request.form.get('small4', False) == 'warning':
+        answer.small4 = True
+        small_warnings.append('подавленность или апатия')
+    if request.form.get('small5', False) == 'warning':
+        answer.small5 = True
+        small_warnings.append('беспокоит сердцебиение')
+    if request.form.get('small6', False) == 'warning':
+        answer.small6 = True
+        small_warnings.append('не получается задержать дыхание на 30 секунд')
+
     answer.submitted = int(time.time())
 
     db.session.add(answer)
     db.session.commit()
+
+    if len(big_warnings) > 1 or len(small_warnings) > 0:
+        warnings = big_warnings + small_warnings
+        delayed(1, send_warning, [contract_id, warnings])
 
     print("{}: Form from {}".format(gts(), contract_id))
 
