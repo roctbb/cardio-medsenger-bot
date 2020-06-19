@@ -331,7 +331,7 @@ def action_save():
         small_warnings.append('увеличение веса на 2 кг')
     if request.form.get('small3', False) == 'warning':
         answer.small3 = True
-        small_warnings.append('увеличение веса на 1 кг')
+        small_warnings.append('уменьшение веса на 1 кг')
     if request.form.get('small4', False) == 'warning':
         answer.small4 = True
         small_warnings.append('подавленность или апатия')
