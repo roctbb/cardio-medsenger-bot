@@ -347,7 +347,7 @@ def action_save():
     db.session.add(answer)
     db.session.commit()
 
-    if len(big_warnings) > 1 or len(small_warnings) > 0:
+    if len(big_warnings) > 0 or len(small_warnings) > 1:
         warnings = big_warnings + small_warnings
         delayed(1, send_warning, [contract_id, warnings])
 
