@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Кардиомониторинг</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        input[type='radio'] {
+            margin: 5px !important;
+        }
+        h6 {
+            margin-top: 15px;
+        }
+    </style>
+
+</head>
+<body>
+<div class="container" style="margin-top: 15px;">
+    <h4>Были ли у Вас приступы стенокардии?</h4>
+
+    <form method="POST" style="margin-top: 25px; font-size: 102%;">
+
+        <div class="radio">
+            <label><input type="radio" name="stenocardia" value="0" checked>Нет.</label>
+        </div>
+        <div class="radio">
+            <label><input type="radio" name="stenocardia" value="1">Когда Вы прошли более 500 метров или поднялись более чем на 1 этаж.</label>
+        </div>
+        <div class="radio">
+            <label><input type="radio" name="stenocardia" value="2">Когда Вы прошли менее 500 метров или поднялись менее чем на 1 этаж.</label>
+        </div>
+
+        <div class="form-group" style="margin-top: 25px;">
+            <input type="submit" class="btn-success btn" value="Отправить"/>
+        </div>
+    </form>
+</div>
+</body>
+</html>

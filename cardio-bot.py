@@ -21,27 +21,7 @@ class Contract(db.Model):
     active = db.Column(db.Boolean, default=True)
     last_push = db.Column(db.BigInteger, default=0)
     mode = db.Column(db.Integer, default=0)
-
-
-class Answer(db.Model):
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    big1 = db.Column(db.Boolean, default=False)
-    big2 = db.Column(db.Boolean, default=False)
-    big3 = db.Column(db.Boolean, default=False)
-    big4 = db.Column(db.Boolean, default=False)
-    big5 = db.Column(db.Boolean, default=False)
-    big6 = db.Column(db.Boolean, default=False)
-    big7 = db.Column(db.Boolean, default=False)
-    small1 = db.Column(db.Boolean, default=False)
-    small2 = db.Column(db.Boolean, default=False)
-    small3 = db.Column(db.Boolean, default=False)
-    small4 = db.Column(db.Boolean, default=False)
-    small5 = db.Column(db.Boolean, default=False)
-    small6 = db.Column(db.Boolean, default=False)
-    submitted = db.Column(db.BigInteger, default=0)
-    contract_id = db.Column(db.Integer, db.ForeignKey('contract.id'), nullable=False)
-    contract = db.relationship('Contract', backref=db.backref('answers', lazy=True))
-
+    scenario = db.Column(db.Integer, default=0)
 
 try:
     db.create_all()
@@ -89,6 +69,7 @@ def init():
         if query.count() != 0:
             contract = query.first()
             contract.active = True
+            contract.last_push = int(time.time())
 
             print("{}: Reactivate contract {}".format(gts(), contract.id))
         else:
@@ -171,6 +152,7 @@ def setting_save():
         if query.count() != 0:
             contract = query.first()
             contract.mode = int(request.form.get('mode', 0))
+            contract.scenario = int(request.form.get('scenario', 0))
             db.session.commit()
         else:
             return "<strong>Ошибка. Контракт не найден.</strong> Попробуйте отключить и снова подключить интеллектуальный агент к каналу консультирвоания.  Если это не сработает, свяжитесь с технической поддержкой."
@@ -194,7 +176,7 @@ def send(contract_id):
         "contract_id": contract_id,
         "api_key": APP_KEY,
         "message": {
-            "text": "Пожалуйста, заполните анкету по симптоматике сердечной недостаточности.",
+            "text": "Пожалуйста, заполните анкету кардиомониторинга.",
             "action_link": "frame",
             "action_name": "Заполнить анкету",
             "action_onetime": True,
@@ -208,8 +190,19 @@ def send(contract_id):
     except Exception as e:
         print('connection error', e)
 
+def save_report(contract_id, report):
+    data = {
+        "contract_id": contract_id,
+        "api_key": APP_KEY,
+        "values": report
+    }
+    print(data)
+    try:
+        requests.post(MAIN_HOST + '/api/agents/records/add', json=data)
+    except Exception as e:
+        print('connection error', e)
 
-def send_warning(contract_id, a):
+def send_warning(contract_id, a, scenario):
     data1 = {
         "contract_id": contract_id,
         "api_key": APP_KEY,
@@ -220,11 +213,17 @@ def send_warning(contract_id, a):
         }
     }
 
+    diagnosis = "сердечной недостаточности"
+    if scenario == 1:
+        diagnosis = "стенокардии"
+    elif scenario == 2:
+        diagnosis = "фибрилляции предсердий"
+
     data2 = {
         "contract_id": contract_id,
         "api_key": APP_KEY,
         "message": {
-            "text": "У пациента наблюдаются вероятные симптомы сердечной недостаточности ({}).".format(' / '.join(a)),
+            "text": "У пациента наблюдаются симптомы {} ({}).".format(scenario, ' / '.join(a)),
             "is_urgent": True,
             "only_doctor": True,
             "need_answer": True
@@ -275,11 +274,11 @@ def action():
 
         if query.count() == 0:
             return "<strong>Запрашиваемый канал консультирования не найден.</strong> Попробуйте отключить и заного подключить интеллектуального агента. Если это не сработает, свяжитесь с технической поддержкой."
-        return render_template('measurement.html')
+
+        return render_template('measurement{}.html'.format(query.first().scenario))
 
     except:
         return "error"
-
 
 @app.route('/frame', methods=['POST'])
 def action_save():
@@ -295,61 +294,103 @@ def action_save():
     except:
         return "error"
 
-    answer = Answer()
-    answer.contract_id = contract_id
+    contract = query.first()
+    report = []
 
-    big_warnings = []
-    small_warnings = []
+    if contract.scenario == 0:
+        big_warnings = []
+        small_warnings = []
+        criteria = [0 for i in range(10)]
 
-    if request.form.get('big1', False) == 'warning':
-        answer.big1 = True
-        big_warnings.append('одышка при ранее привычной физической нагрузке')
-    if request.form.get('big2', False) == 'warning':
-        answer.big2 = True
-        big_warnings.append('жалобы на одышку в положение лежа')
-    if request.form.get('big3', False) == 'warning':
-        answer.big3 = True
-        big_warnings.append('приступы ночной одышки')
-    if request.form.get('big4', False) == 'warning':
-        answer.big4 = True
-        big_warnings.append('физическая нагрузка дается тяжелее, чем ранее')
-    if request.form.get('big5', False) == 'warning':
-        answer.big5 = True
-        big_warnings.append('слабость, повышенная утомляемость, необходимость в более продолжительном отдыхе')
-    if request.form.get('big6', False) == 'warning':
-        answer.big6 = True
-        big_warnings.append('отечность голеней, увеличение в объеме лодыжек')
-    if request.form.get('big7', False) == 'warning':
-        answer.big7 = True
-        big_warnings.append('увеличилась ли окружность талии')
+        criteria[0] = request.form.get('big1', False) == 'warning'
+        if criteria[0]:
+            big_warnings.append('одышка при ранее привычной физической нагрузке')
 
-    if request.form.get('small1', False) == 'warning':
-        answer.small1 = True
-        small_warnings.append('ночной кашель')
-    if request.form.get('small2', False) == 'warning':
-        answer.small2 = True
-        small_warnings.append('увеличение веса на 2 кг')
-    if request.form.get('small3', False) == 'warning':
-        answer.small3 = True
-        small_warnings.append('уменьшение веса на 1 кг')
-    if request.form.get('small4', False) == 'warning':
-        answer.small4 = True
-        small_warnings.append('подавленность или апатия')
-    if request.form.get('small5', False) == 'warning':
-        answer.small5 = True
-        small_warnings.append('беспокоит сердцебиение')
-    if request.form.get('small6', False) == 'warning':
-        answer.small6 = True
-        small_warnings.append('не получается задержать дыхание на 30 секунд')
+        criteria[1] = request.form.get('big2', False) == 'warning'
+        if criteria[1]:
+            big_warnings.append('жалобы на одышку в положение лежа')
 
-    answer.submitted = int(time.time())
+        criteria[2] = request.form.get('big3', False) == 'warning'
+        if criteria[2]:
+            big_warnings.append('приступы ночной одышки')
 
-    db.session.add(answer)
-    db.session.commit()
+        criteria[3] = request.form.get('big4', False) == 'warning'
+        if criteria[3]:
+            big_warnings.append('физическая нагрузка дается тяжелее, чем ранее')
 
-    if len(big_warnings) > 0 or len(small_warnings) > 1:
-        warnings = big_warnings + small_warnings
-        delayed(1, send_warning, [contract_id, warnings])
+        criteria[4] = request.form.get('big5', False) == 'warning'
+        if criteria[4]:
+            big_warnings.append('слабость, повышенная утомляемость, необходимость в более продолжительном отдыхе')
+
+        criteria[5] = request.form.get('big6', False) == 'warning'
+        if criteria[5]:
+            big_warnings.append('отечность голеней, увеличение в объеме лодыжек')
+
+        criteria[6] = request.form.get('small1', False) == 'warning'
+        if criteria[6]:
+            small_warnings.append('ночной кашель')
+
+        criteria[7] = request.form.get('small2', False) == 'warning'
+        if criteria[7]:
+            small_warnings.append('подавленность или апатия')
+
+        criteria[8] = request.form.get('small3', False) == 'warning'
+        if criteria[8]:
+            small_warnings.append('сердцебиение')
+
+        criteria[9] = request.form.get('small4', False) == 'warning'
+        if criteria[9]:
+            small_warnings.append('не получается задержать дыхание на 30 секунд')
+
+        for i in range(10):
+            report.append({
+                "category_name": "heartfailure_claim_{}".format(i + 1),
+                "value": int(criteria[i])
+            })
+
+        if len(big_warnings) > 0 or len(small_warnings) > 1:
+            warnings = big_warnings + small_warnings
+            delayed(1, send_warning, [contract_id, warnings, contract.scenario])
+
+    elif contract.scenario == 1:
+        criteria = int(request.form.get('stenocardia', 1))
+        if criteria == 2:
+            delayed(1, send_warning, [contract_id, ["стенокардия при небольшой физической нагрузке"], contract.scenario])
+
+        report.append({
+            "category_name": "stenocardia_claim_1",
+            "value": criteria
+        })
+
+    else:
+        warnings = []
+        criteria1 = int(request.form.get('fibrillation1', 1))
+        if criteria1 == 2:
+            warnings.append("выраженные симптомы")
+        if criteria1 == 3:
+            warnings.append("выраженные симптомы c нарушением нормальной жизнедеятельности")
+
+        criteria2 = int(request.form.get('fibrillation2', 1))
+        if criteria2 == 2:
+            warnings.append("тяжелые кровотечения")
+
+        report.append({
+            "category_name": "fibrillation_claim_1",
+            "value": criteria1
+        })
+
+        report.append({
+            "category_name": "fibrillation_claim_2",
+            "value": criteria2
+        })
+
+        if len(warnings) > 0:
+            delayed(1, send_warning, [contract_id, warnings, contract.scenario])
+
+
+    delayed(1, save_report, [contract_id, report])
+
+
 
     print("{}: Form from {}".format(gts(), contract_id))
 

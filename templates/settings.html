@@ -2,15 +2,24 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Мониторинг сердечной недостаточности: настройка канала консультирования</title>
+    <title>Кардиомониторинг: настройка канала консультирования</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
           integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 </head>
 <body>
 <div class="container">
-    <h4 style="margin-top: 15px; margin-bottom: 15px;">Мониторинг сердечной недостаточности: настройка канала консультирования</h4>
+    <h4 style="margin-top: 15px; margin-bottom: 15px;">Кардиомониторинг: настройка канала консультирования</h4>
 
     <form method="POST">
+        <div class="form-group">
+            <strong>Сценарий:</strong>
+            <select name="scenario" class="form-control">
+                <option value="0"{% if contract.scenario == 0 %} selected {% endif %}>Сердечная недостаточность</option>
+                <option value="1"{% if contract.scenario == 1 %} selected {% endif %}>Стенокардия</option>
+                <option value="2"{% if contract.scenario == 2 %} selected {% endif %}>Фибрилляция предсердий</option>
+            </select>
+        </div>
+
         <div class="form-group">
             <strong>Частота отправки опросника:</strong>
             <select name="mode" class="form-control">
