@@ -333,16 +333,17 @@ def check_params(contract, data):
                 small_warnings.append(warning_names[i + 5])
 
         # control weight
+        time_to = int(time.time()) - 60 * 60 * 24 * 4
+        time_from = int(time.time()) - 60 * 60 * 24 * 11
+
         try:
-            time_to = int(time.time()) - 60 * 60 * 24 * 4
-            time_from = int(time.time()) - 60 * 60 * 24 * 11
             last_weight = get_category(contract_id, 'weight', limit=1)[0]
             week_weight = get_category(contract_id, 'weight', time_from=time_from, time_to=time_to)
 
             delta = last_weight - sum(week_weight) / len(week_weight)
             if delta >= 2:
                 small_warnings.append('увеличение веса на {} кг'.format(round(delta, 1)))
-            if delta <= 1:
+            if delta <= -1:
                 small_warnings.append('уменьшение веса на {} кг'.format(round(-delta, 1)))
 
         except Exception as e:
@@ -350,8 +351,6 @@ def check_params(contract, data):
 
         # control waist_circumference
         try:
-            time_to = int(time.time()) - 60 * 60 * 24 * 4
-            time_from = int(time.time()) - 60 * 60 * 24 * 11
             last_value = get_category(contract_id, 'waist_circumference', limit=1)[0]
             week_value = get_category(contract_id, 'waist_circumference', time_from=time_from, time_to=time_to)
 
@@ -364,8 +363,6 @@ def check_params(contract, data):
 
         # control leg_circumference
         try:
-            time_to = int(time.time()) - 60 * 60 * 24 * 4
-            time_from = int(time.time()) - 60 * 60 * 24 * 11
             last_value_left = get_category(contract_id, 'leg_circumference_left', limit=1)[0]
             last_value_right = get_category(contract_id, 'leg_circumference_right', limit=1)[0]
             week_values_left = get_category(contract_id, 'leg_circumference_left', time_from=time_from, time_to=time_to)
@@ -392,6 +389,7 @@ def check_params(contract, data):
                 "value": int(criteria[i])
             })
 
+        # send warning
         if len(big_warnings) > 0 or len(small_warnings) > 1:
             warnings = big_warnings + small_warnings
             delayed(1, send_warning, [contract_id, warnings, contract.scenario])
