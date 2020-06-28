@@ -224,7 +224,7 @@ def get_category(contract_id, category_name, time_from=None, time_to=None, limit
         return result.json()
     except Exception as e:
         print('connection error', e)
-        return []
+        return {}
 
 def send_warning(contract_id, a, scenario):
     data1 = {
@@ -247,7 +247,7 @@ def send_warning(contract_id, a, scenario):
         "contract_id": contract_id,
         "api_key": APP_KEY,
         "message": {
-            "text": "У пациента наблюдаются симптомы {} ({}).".format(scenario, ' / '.join(a)),
+            "text": "У пациента наблюдаются симптомы {} ({}).".format(diagnosis, ' / '.join(a)),
             "is_urgent": True,
             "only_doctor": True,
             "need_answer": True
@@ -337,8 +337,8 @@ def check_params(contract, data):
         time_from = int(time.time()) - 60 * 60 * 24 * 11
 
         try:
-            last_weight = get_category(contract_id, 'weight', limit=1)[0]
-            week_weight = get_category(contract_id, 'weight', time_from=time_from, time_to=time_to)
+            last_weight = get_category(contract_id, 'weight', limit=1)['values'][0]['value']
+            week_weight = [record['value'] for record in get_category(contract_id, 'weight', time_from=time_from, time_to=time_to)['values']]
 
             delta = last_weight - sum(week_weight) / len(week_weight)
             if delta >= 2:
@@ -351,8 +351,8 @@ def check_params(contract, data):
 
         # control waist_circumference
         try:
-            last_value = get_category(contract_id, 'waist_circumference', limit=1)[0]
-            week_value = get_category(contract_id, 'waist_circumference', time_from=time_from, time_to=time_to)
+            last_value = get_category(contract_id, 'waist_circumference', limit=1)['values'][0]['value']
+            week_value = [record['value'] for record in get_category(contract_id, 'waist_circumference', time_from=time_from, time_to=time_to)['values']]
 
             delta = last_value - sum(week_value) / len(week_value)
             if delta >= 5:
@@ -363,10 +363,10 @@ def check_params(contract, data):
 
         # control leg_circumference
         try:
-            last_value_left = get_category(contract_id, 'leg_circumference_left', limit=1)[0]
-            last_value_right = get_category(contract_id, 'leg_circumference_right', limit=1)[0]
-            week_values_left = get_category(contract_id, 'leg_circumference_left', time_from=time_from, time_to=time_to)
-            week_values_right = get_category(contract_id, 'leg_circumference_right', time_from=time_from, time_to=time_to)
+            last_value_left = get_category(contract_id, 'leg_circumference_left', limit=1)['values'][0]['value']
+            last_value_right = get_category(contract_id, 'leg_circumference_right', limit=1)['values'][0]['value']
+            week_values_left = [record['value'] for record in get_category(contract_id, 'leg_circumference_left', time_from=time_from, time_to=time_to)['values']]
+            week_values_right = [record['value'] for record in get_category(contract_id, 'leg_circumference_right', time_from=time_from, time_to=time_to)['values']]
 
             delta_left = last_value_left - sum(week_values_left) / len(week_values_left)
             delta_right = last_value_right - sum(week_values_right) / len(week_values_right)
