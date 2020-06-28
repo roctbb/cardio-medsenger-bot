@@ -202,6 +202,30 @@ def save_report(contract_id, report):
     except Exception as e:
         print('connection error', e)
 
+def get_category(contract_id, category_name, time_from=None, time_to=None, limit=None, offset=None):
+
+    data = {
+        "contract_id": contract_id,
+        "api_key": APP_KEY,
+        "category_name": category_name,
+    }
+    
+    if limit:
+        data['limit'] = limit
+    if offset:
+        data['offset'] = offset
+    if time_from:
+        data['from'] = time_from
+    if time_to:
+        data['to'] = time_to
+
+    try:
+        result = requests.post(MAIN_HOST + '/api/agents/records/get', json=data)
+        return result.json()
+    except Exception as e:
+        print('connection error', e)
+        return []
+
 def send_warning(contract_id, a, scenario):
     data1 = {
         "contract_id": contract_id,
@@ -280,68 +304,88 @@ def action():
     except:
         return "error"
 
-@app.route('/frame', methods=['POST'])
-def action_save():
-    key = request.args.get('api_key', '')
-    if key != APP_KEY:
-        return "<strong>Некорректный ключ доступа.</strong> Свяжитесь с технической поддержкой."
-
-    try:
-        contract_id = int(request.args.get('contract_id', -1))
-        query = Contract.query.filter_by(id=contract_id)
-        if query.count() == 0:
-            return "<strong>Запрашиваемый канал консультирования не найден.</strong> Попробуйте отключить и заного подключить интеллектуального агента. Если это не сработает, свяжитесь с технической поддержкой."
-    except:
-        return "error"
-
-    contract = query.first()
+def check_params(contract, data):
     report = []
+    
+    contract_id = contract.id
 
     if contract.scenario == 0:
         big_warnings = []
         small_warnings = []
+
+        warning_names = ['одышка при ранее привычной физической нагрузке', 'жалобы на одышку в положение лежа',
+                         'приступы ночной одышки',
+                         'физическая нагрузка дается тяжелее, чем ранее',
+                         'слабость, повышенная утомляемость, необходимость в более продолжительном отдыхе',
+                         'отечность голеней, увеличение в объеме лодыжек', 'ночной кашель', 'подавленность или апатия',
+                         'сердцебиение',
+                         'не получается задержать дыхание на 30 секунд']
         criteria = [0 for i in range(10)]
 
-        criteria[0] = request.form.get('big1', False) == 'warning'
-        if criteria[0]:
-            big_warnings.append('одышка при ранее привычной физической нагрузке')
+        for i in range(1, 7):
+            criteria[i - 1] = data.get('big{}'.format(i), False) == 'warning'
+            if criteria[i - 1]:
+                big_warnings.append(warning_names[i - 1])
 
-        criteria[1] = request.form.get('big2', False) == 'warning'
-        if criteria[1]:
-            big_warnings.append('жалобы на одышку в положение лежа')
+        for i in range(1, 5):
+            criteria[i + 5] = data.get('small{}'.format(i), False) == 'warning'
+            if criteria[i + 5]:
+                small_warnings.append(warning_names[i + 5])
 
-        criteria[2] = request.form.get('big3', False) == 'warning'
-        if criteria[2]:
-            big_warnings.append('приступы ночной одышки')
+        # control weight
+        try:
+            time_to = int(time.time()) - 60 * 60 * 24 * 4
+            time_from = int(time.time()) - 60 * 60 * 24 * 11
+            last_weight = get_category(contract_id, 'weight', limit=1)[0]
+            week_weight = get_category(contract_id, 'weight', time_from=time_from, time_to=time_to)
 
-        criteria[3] = request.form.get('big4', False) == 'warning'
-        if criteria[3]:
-            big_warnings.append('физическая нагрузка дается тяжелее, чем ранее')
+            delta = last_weight - sum(week_weight) / len(week_weight)
+            if delta >= 2:
+                small_warnings.append('увеличение веса на {} кг'.format(round(delta, 1)))
+            if delta <= 1:
+                small_warnings.append('уменьшение веса на {} кг'.format(round(-delta, 1)))
 
-        criteria[4] = request.form.get('big5', False) == 'warning'
-        if criteria[4]:
-            big_warnings.append('слабость, повышенная утомляемость, необходимость в более продолжительном отдыхе')
+        except Exception as e:
+            print(e)
 
-        criteria[5] = request.form.get('big6', False) == 'warning'
-        if criteria[5]:
-            big_warnings.append('отечность голеней, увеличение в объеме лодыжек')
+        # control waist_circumference
+        try:
+            time_to = int(time.time()) - 60 * 60 * 24 * 4
+            time_from = int(time.time()) - 60 * 60 * 24 * 11
+            last_value = get_category(contract_id, 'waist_circumference', limit=1)[0]
+            week_value = get_category(contract_id, 'waist_circumference', time_from=time_from, time_to=time_to)
 
-        criteria[6] = request.form.get('small1', False) == 'warning'
-        if criteria[6]:
-            small_warnings.append('ночной кашель')
+            delta = last_value - sum(week_value) / len(week_value)
+            if delta >= 5:
+                big_warnings.append('увеличение окружности талии на {} см'.format(round(delta, 1)))
 
-        criteria[7] = request.form.get('small2', False) == 'warning'
-        if criteria[7]:
-            small_warnings.append('подавленность или апатия')
+        except Exception as e:
+            print(e)
 
-        criteria[8] = request.form.get('small3', False) == 'warning'
-        if criteria[8]:
-            small_warnings.append('сердцебиение')
+        # control leg_circumference
+        try:
+            time_to = int(time.time()) - 60 * 60 * 24 * 4
+            time_from = int(time.time()) - 60 * 60 * 24 * 11
+            last_value_left = get_category(contract_id, 'leg_circumference_left', limit=1)[0]
+            last_value_right = get_category(contract_id, 'leg_circumference_right', limit=1)[0]
+            week_values_left = get_category(contract_id, 'leg_circumference_left', time_from=time_from, time_to=time_to)
+            week_values_right = get_category(contract_id, 'leg_circumference_right', time_from=time_from, time_to=time_to)
 
-        criteria[9] = request.form.get('small4', False) == 'warning'
-        if criteria[9]:
-            small_warnings.append('не получается задержать дыхание на 30 секунд')
+            delta_left = last_value_left - sum(week_values_left) / len(week_values_left)
+            delta_right = last_value_right - sum(week_values_right) / len(week_values_right)
+            if delta_left >= 3:
+                big_warnings.append('увеличение обхвата левой голени на {} см'.format(round(delta_left, 1)))
+            if delta_right >= 3:
+                big_warnings.append('увеличение обхвата правой голени на {} см'.format(round(delta_right, 1)))
 
+            change = abs(last_value_left - last_value_right)
+            if change >= 3:
+                big_warnings.append('разница между обхватом голени с разных сторон - {} см'.format(round(change, 1)))
+
+        except Exception as e:
+            print(e)
+
+        # send report
         for i in range(10):
             report.append({
                 "category_name": "heartfailure_claim_{}".format(i + 1),
@@ -353,9 +397,10 @@ def action_save():
             delayed(1, send_warning, [contract_id, warnings, contract.scenario])
 
     elif contract.scenario == 1:
-        criteria = int(request.form.get('stenocardia', 1))
+        criteria = int(data.get('stenocardia', 1))
         if criteria == 2:
-            delayed(1, send_warning, [contract_id, ["стенокардия при небольшой физической нагрузке"], contract.scenario])
+            delayed(1, send_warning,
+                    [contract_id, ["стенокардия при небольшой физической нагрузке"], contract.scenario])
 
         report.append({
             "category_name": "stenocardia_claim_1",
@@ -364,13 +409,13 @@ def action_save():
 
     else:
         warnings = []
-        criteria1 = int(request.form.get('fibrillation1', 1))
+        criteria1 = int(data.get('fibrillation1', 1))
         if criteria1 == 2:
             warnings.append("выраженные симптомы")
         if criteria1 == 3:
             warnings.append("выраженные симптомы c нарушением нормальной жизнедеятельности")
 
-        criteria2 = int(request.form.get('fibrillation2', 1))
+        criteria2 = int(data.get('fibrillation2', 1))
         if criteria2 == 2:
             warnings.append("тяжелые кровотечения")
 
@@ -387,16 +432,33 @@ def action_save():
         if len(warnings) > 0:
             delayed(1, send_warning, [contract_id, warnings, contract.scenario])
 
-
     delayed(1, save_report, [contract_id, report])
 
 
 
+@app.route('/frame', methods=['POST'])
+def action_save():
+    key = request.args.get('api_key', '')
+    if key != APP_KEY:
+        return "<strong>Некорректный ключ доступа.</strong> Свяжитесь с технической поддержкой."
+
+    try:
+        contract_id = int(request.args.get('contract_id', -1))
+        query = Contract.query.filter_by(id=contract_id)
+        if query.count() == 0:
+            return "<strong>Запрашиваемый канал консультирования не найден.</strong> Попробуйте отключить и заного подключить интеллектуального агента. Если это не сработает, свяжитесь с технической поддержкой."
+    except:
+        return "error"
+
+    contract = query.first()
+
+    delayed(1, check_params, (contract, request.form))
+
     print("{}: Form from {}".format(gts(), contract_id))
 
     return """
-    <strong>Спасибо, окно можно закрыть</strong><script>window.parent.postMessage('close-modal-success','*');</script>
-    """
+            <strong>Спасибо, окно можно закрыть</strong><script>window.parent.postMessage('close-modal-success','*');</script>
+            """
 
 
 t = Thread(target=sender)
