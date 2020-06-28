@@ -1,14 +1,11 @@
-import datetime
 import time
 from threading import Thread
 from flask import Flask, request, render_template
-import json
-import requests
-import os
 from config import *
 import threading
 import datetime
 from flask_sqlalchemy import SQLAlchemy
+from agents_api import *
 
 app = Flask(__name__)
 db_string = "postgres://{}:{}@{}:{}/{}".format(DB_LOGIN, DB_PASSWORD, DB_HOST, DB_PORT, DB_DATABASE)
@@ -22,6 +19,7 @@ class Contract(db.Model):
     last_push = db.Column(db.BigInteger, default=0)
     mode = db.Column(db.Integer, default=0)
     scenario = db.Column(db.Integer, default=0)
+
 
 try:
     db.create_all()
@@ -190,41 +188,7 @@ def send(contract_id):
     except Exception as e:
         print('connection error', e)
 
-def save_report(contract_id, report):
-    data = {
-        "contract_id": contract_id,
-        "api_key": APP_KEY,
-        "values": report
-    }
-    print(data)
-    try:
-        requests.post(MAIN_HOST + '/api/agents/records/add', json=data)
-    except Exception as e:
-        print('connection error', e)
 
-def get_category(contract_id, category_name, time_from=None, time_to=None, limit=None, offset=None):
-
-    data = {
-        "contract_id": contract_id,
-        "api_key": APP_KEY,
-        "category_name": category_name,
-    }
-    
-    if limit:
-        data['limit'] = limit
-    if offset:
-        data['offset'] = offset
-    if time_from:
-        data['from'] = time_from
-    if time_to:
-        data['to'] = time_to
-
-    try:
-        result = requests.post(MAIN_HOST + '/api/agents/records/get', json=data)
-        return result.json()
-    except Exception as e:
-        print('connection error', e)
-        return {}
 
 def send_warning(contract_id, a, scenario):
     data1 = {
@@ -304,9 +268,10 @@ def action():
     except:
         return "error"
 
+
 def check_params(contract, data):
     report = []
-    
+
     contract_id = contract.id
 
     if contract.scenario == 0:
@@ -337,8 +302,9 @@ def check_params(contract, data):
         time_from = int(time.time()) - 60 * 60 * 24 * 11
 
         try:
-            last_weight = get_category(contract_id, 'weight', limit=1)['values'][0]['value']
-            week_weight = [record['value'] for record in get_category(contract_id, 'weight', time_from=time_from, time_to=time_to)['values']]
+            last_weight = get_records(contract_id, 'weight', limit=1)['values'][0]['value']
+            week_weight = [record['value'] for record in
+                           get_records(contract_id, 'weight', time_from=time_from, time_to=time_to)['values']]
 
             delta = last_weight - sum(week_weight) / len(week_weight)
             if delta >= 2:
@@ -351,8 +317,10 @@ def check_params(contract, data):
 
         # control waist_circumference
         try:
-            last_value = get_category(contract_id, 'waist_circumference', limit=1)['values'][0]['value']
-            week_value = [record['value'] for record in get_category(contract_id, 'waist_circumference', time_from=time_from, time_to=time_to)['values']]
+            last_value = get_records(contract_id, 'waist_circumference', limit=1)['values'][0]['value']
+            week_value = [record['value'] for record in
+                          get_records(contract_id, 'waist_circumference', time_from=time_from, time_to=time_to)[
+                              'values']]
 
             delta = last_value - sum(week_value) / len(week_value)
             if delta >= 5:
@@ -363,10 +331,14 @@ def check_params(contract, data):
 
         # control leg_circumference
         try:
-            last_value_left = get_category(contract_id, 'leg_circumference_left', limit=1)['values'][0]['value']
-            last_value_right = get_category(contract_id, 'leg_circumference_right', limit=1)['values'][0]['value']
-            week_values_left = [record['value'] for record in get_category(contract_id, 'leg_circumference_left', time_from=time_from, time_to=time_to)['values']]
-            week_values_right = [record['value'] for record in get_category(contract_id, 'leg_circumference_right', time_from=time_from, time_to=time_to)['values']]
+            last_value_left = get_records(contract_id, 'leg_circumference_left', limit=1)['values'][0]['value']
+            last_value_right = get_records(contract_id, 'leg_circumference_right', limit=1)['values'][0]['value']
+            week_values_left = [record['value'] for record in
+                                get_records(contract_id, 'leg_circumference_left', time_from=time_from,
+                                            time_to=time_to)['values']]
+            week_values_right = [record['value'] for record in
+                                 get_records(contract_id, 'leg_circumference_right', time_from=time_from,
+                                             time_to=time_to)['values']]
 
             delta_left = last_value_left - sum(week_values_left) / len(week_values_left)
             delta_right = last_value_right - sum(week_values_right) / len(week_values_right)
@@ -384,10 +356,7 @@ def check_params(contract, data):
 
         # send report
         for i in range(10):
-            report.append({
-                "category_name": "heartfailure_claim_{}".format(i + 1),
-                "value": int(criteria[i])
-            })
+            report.append(("heartfailure_claim_{}".format(i + 1), int(criteria[i])))
 
         # send warning
         if len(big_warnings) > 0 or len(small_warnings) > 1:
@@ -400,11 +369,7 @@ def check_params(contract, data):
             delayed(1, send_warning,
                     [contract_id, ["стенокардия при небольшой физической нагрузке"], contract.scenario])
 
-        report.append({
-            "category_name": "stenocardia_claim_1",
-            "value": criteria
-        })
-
+        report.append(("stenocardia_claim_1", criteria))
     else:
         warnings = []
         criteria1 = int(data.get('fibrillation1', 1))
@@ -417,21 +382,14 @@ def check_params(contract, data):
         if criteria2 == 2:
             warnings.append("тяжелые кровотечения")
 
-        report.append({
-            "category_name": "fibrillation_claim_1",
-            "value": criteria1
-        })
+        report.append(("fibrillation_claim_1", criteria1))
 
-        report.append({
-            "category_name": "fibrillation_claim_2",
-            "value": criteria2
-        })
+        report.append(("fibrillation_claim_2", criteria2))
 
         if len(warnings) > 0:
             delayed(1, send_warning, [contract_id, warnings, contract.scenario])
 
-    delayed(1, save_report, [contract_id, report])
-
+    delayed(1, add_records, [contract_id, report])
 
 
 @app.route('/frame', methods=['POST'])
