@@ -69,6 +69,13 @@ def init():
             contract.active = True
             contract.last_push = int(time.time())
 
+            if data.get('preset', None) == 'heartfailure':
+                contract.scenario = 0
+            if data.get('preset', None) == 'stenocardia':
+                contract.scenario = 1
+            if data.get('preset', None) == 'fibrillation':
+                contract.scenario = 2
+
             print("{}: Reactivate contract {}".format(gts(), contract.id))
         else:
             contract = Contract(id=contract_id)
