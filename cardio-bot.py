@@ -340,6 +340,11 @@ def check_params(contract, data):
         try:
             last_value_left = get_records(contract_id, 'leg_circumference_left', limit=1)['values'][0]['value']
             last_value_right = get_records(contract_id, 'leg_circumference_right', limit=1)['values'][0]['value']
+
+            change = abs(last_value_left - last_value_right)
+            if change >= 3:
+                big_warnings.append('разница между обхватом голени с разных сторон - {} см'.format(round(change, 1)))
+
             week_values_left = [record['value'] for record in
                                 get_records(contract_id, 'leg_circumference_left', time_from=time_from,
                                             time_to=time_to)['values']]
@@ -353,10 +358,6 @@ def check_params(contract, data):
                 big_warnings.append('увеличение обхвата левой голени на {} см'.format(round(delta_left, 1)))
             if delta_right >= 3:
                 big_warnings.append('увеличение обхвата правой голени на {} см'.format(round(delta_right, 1)))
-
-            change = abs(last_value_left - last_value_right)
-            if change >= 3:
-                big_warnings.append('разница между обхватом голени с разных сторон - {} см'.format(round(change, 1)))
 
         except Exception as e:
             print(e)
