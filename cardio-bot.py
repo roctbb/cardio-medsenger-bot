@@ -67,7 +67,7 @@ def init():
         if query.count() != 0:
             contract = query.first()
             contract.active = True
-            contract.last_push = int(time.time())
+            contract.last_push = 0
 
             print("{}: Reactivate contract {}".format(gts(), contract.id))
         else:
