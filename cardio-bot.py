@@ -1,3 +1,4 @@
+import json
 import time
 from threading import Thread
 from flask import Flask, request, render_template
@@ -53,6 +54,24 @@ def gts():
     now = datetime.datetime.now()
     return now.strftime("%Y-%m-%d %H:%M:%S")
 
+
+@app.route('/status', methods=['POST'])
+def status():
+    data = request.json
+
+    if data['api_key'] != APP_KEY:
+        return 'invalid key'
+
+    contract_ids = [l[0] for l in db.session.query(Contract.id).all()]
+
+    answer = {
+        "is_tracking_data": True,
+        "supported_scenarios": ['heartfailure', 'stenocardia', 'fibrillation'],
+        "tracked_contracts": contract_ids
+    }
+    print(answer)
+
+    return json.dumps(answer)
 
 @app.route('/init', methods=['POST'])
 def init():
