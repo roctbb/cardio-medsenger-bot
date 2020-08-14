@@ -18,7 +18,7 @@ class Contract(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     active = db.Column(db.Boolean, default=True)
     last_push = db.Column(db.BigInteger, default=0)
-    mode = db.Column(db.Integer, default=0)
+    mode = db.Column(db.Integer, default=1)
     scenario = db.Column(db.Integer, default=0)
 
 
