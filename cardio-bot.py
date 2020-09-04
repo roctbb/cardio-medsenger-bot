@@ -110,6 +110,7 @@ def init():
         return "error"
 
     print('sending ok')
+    delayed(1, sender, [])
     return 'ok'
 
 
@@ -261,7 +262,7 @@ def sender():
                 contract.last_push = int(time.time())
 
         db.session.commit()
-        time.sleep(60)
+        time.sleep(60 * 5)
 
 
 @app.route('/message', methods=['POST'])
