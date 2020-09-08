@@ -20,6 +20,8 @@ class Contract(db.Model):
     last_push = db.Column(db.BigInteger, default=0)
     mode = db.Column(db.Integer, default=1)
     scenario = db.Column(db.Integer, default=0)
+    last_task_id = db.Column(db.Integer, nullable=True)
+    last_task_push = db.Column(db.BigInteger, default=0)
 
 
 try:
@@ -54,6 +56,20 @@ def gts():
     now = datetime.datetime.now()
     return now.strftime("%Y-%m-%d %H:%M:%S")
 
+def submit_task(contract):
+    if contract.last_task_id:
+        make_task(contract.id, contract.last_task_id)
+    contract.last_task_id = None
+
+def drop_task(contract):
+    if contract.last_task_id:
+        delete_task(contract.id, contract.last_task_id)
+    contract.last_task_id = None
+
+def init_task(contract):
+    drop_task(contract)
+    contract.last_task_id = add_task(contract.id, "Заполнить анкету кардиомониторинга", action_link='frame')
+
 
 @app.route('/status', methods=['POST'])
 def status():
@@ -72,6 +88,7 @@ def status():
     print(answer)
 
     return json.dumps(answer)
+
 
 @app.route('/init', methods=['POST'])
 def init():
@@ -102,6 +119,8 @@ def init():
         if data.get('preset', None) == 'fibrillation':
             contract.scenario = 2
 
+        init_task(contract)
+
         db.session.commit()
 
 
@@ -129,6 +148,9 @@ def remove():
         if query.count() != 0:
             contract = query.first()
             contract.active = False
+
+            drop_task(contract)
+
             db.session.commit()
 
             print("{}: Deactivate contract {}".format(gts(), contract.id))
@@ -197,57 +219,27 @@ def index():
 
 
 def send(contract_id):
-    data = {
-        "contract_id": contract_id,
-        "api_key": APP_KEY,
-        "message": {
-            "text": "Пожалуйста, заполните анкету кардиомониторинга.",
-            "action_link": "frame",
-            "action_name": "Заполнить анкету",
-            "action_onetime": True,
-            "only_doctor": False,
-            "only_patient": True,
-            "action_deadline": int(time.time()) + 24 * 59 * 60
-        }
-    }
     try:
-        requests.post(MAIN_HOST + '/api/agents/message', json=data)
+        send_message(contract_id, "Пожалуйста, заполните анкету кардиомониторинга.", action_link="frame",
+                     action_name="Заполнить анкету", action_onetime=True, only_doctor=False, only_patient=True,
+                     action_deadline=int(time.time()) + 24 * 59 * 60)
     except Exception as e:
         print('connection error', e)
 
 
-
 def send_warning(contract_id, a, scenario):
-    data1 = {
-        "contract_id": contract_id,
-        "api_key": APP_KEY,
-        "message": {
-            "text": "Мы направили уведомление о симптомах вашему лечащему врачу, он свяжется с вами в ближайшее время.",
-            "is_urgent": True,
-            "only_patient": True,
-        }
-    }
-
     diagnosis = "сердечной недостаточности"
     if scenario == 1:
         diagnosis = "стенокардии"
     elif scenario == 2:
         diagnosis = "фибрилляции предсердий"
 
-    data2 = {
-        "contract_id": contract_id,
-        "api_key": APP_KEY,
-        "message": {
-            "text": "У пациента наблюдаются симптомы {} ({}).".format(diagnosis, ' / '.join(a)),
-            "is_urgent": True,
-            "only_doctor": True,
-            "need_answer": True
-        }
-    }
     try:
-        print('sending')
-        result1 = requests.post(MAIN_HOST + '/api/agents/message', json=data1)
-        result1 = requests.post(MAIN_HOST + '/api/agents/message', json=data2)
+        send_message(contract_id,
+                     text="Мы направили уведомление о симптомах вашему лечащему врачу, он свяжется с вами в ближайшее время.",
+                     is_urgent=True, only_patient=True)
+        send_message(contract_id, text="У пациента наблюдаются симптомы {} ({}).".format(diagnosis, ' / '.join(a)),
+                     is_urgent=True, only_doctor=True, need_answer=True)
     except Exception as e:
         print('connection error', e)
 
@@ -255,8 +247,14 @@ def send_warning(contract_id, a, scenario):
 def sender():
     while True:
         contracts = Contract.query.all()
+        now = datetime.datetime.now()
+        hour = now.hour
         for contract in contracts:
-            if time.time() - contract.last_push > get_delta(contract.mode):
+            if hour > 0 and hour < 8 and time.time() - contract.last_task_push > get_delta(contract.mode) - 8 * 60 * 60:
+                print("{}: Init task to {}".format(gts(), contract.id))
+                init_task(contract)
+
+            if contract.last_task_id != None and time.time() - contract.last_push > get_delta(contract.mode):
                 send(contract.id)
                 print("{}: Sending form to {}".format(gts(), contract.id))
                 contract.last_push = int(time.time())
@@ -296,12 +294,10 @@ def action():
         return "error"
 
 
-def check_params(contract, data):
+def check_params(contract_id, scenario, data):
     report = []
 
-    contract_id = contract.id
-
-    if contract.scenario == 0:
+    if scenario == 0:
         big_warnings = []
         small_warnings = []
 
@@ -389,13 +385,13 @@ def check_params(contract, data):
         # send warning
         if len(big_warnings) > 0 or len(small_warnings) > 1:
             warnings = big_warnings + small_warnings
-            delayed(1, send_warning, [contract_id, warnings, contract.scenario])
+            delayed(1, send_warning, [contract_id, warnings, scenario])
 
-    elif contract.scenario == 1:
+    elif scenario == 1:
         criteria = int(data.get('stenocardia', 1))
         if criteria == 2:
             delayed(1, send_warning,
-                    [contract_id, ["стенокардия при небольшой физической нагрузке"], contract.scenario])
+                    [contract_id, ["стенокардия при небольшой физической нагрузке"], scenario])
 
         report.append(("stenocardia_claim_1", criteria))
     else:
@@ -415,7 +411,7 @@ def check_params(contract, data):
         report.append(("fibrillation_claim_2", criteria2))
 
         if len(warnings) > 0:
-            delayed(1, send_warning, [contract_id, warnings, contract.scenario])
+            delayed(1, send_warning, [contract_id, warnings, scenario])
 
     delayed(1, add_records, [contract_id, report])
 
@@ -435,8 +431,11 @@ def action_save():
         return "error"
 
     contract = query.first()
+    submit_task(contract)
 
-    delayed(1, check_params, (contract, request.form))
+    db.session.commit()
+
+    delayed(1, check_params, (contract.id, contract.scenario, request.form))
 
     print("{}: Form from {}".format(gts(), contract_id))
 

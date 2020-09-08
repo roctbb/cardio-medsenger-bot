@@ -2,6 +2,59 @@ from config import *
 import requests
 
 
+def send_message(contract_id, text, action_link=None, action_name=None, action_onetime=True, only_doctor=False,
+                 only_patient=False, action_deadline=None, is_urgent=False, need_answer=False,
+                 attachments=None):
+    message = {
+        "text": text
+    }
+
+    if action_link:
+        message['action_link'] = action_link
+
+    if action_name:
+        message['action_name'] = action_name
+
+    if action_onetime:
+        message['action_onetime'] = action_onetime
+
+    if only_doctor:
+        message['only_doctor'] = only_doctor
+
+    if need_answer:
+        message['need_answer'] = need_answer
+
+    if only_patient:
+        message['only_patient'] = only_patient
+
+    if action_deadline:
+        message['action_deadline'] = action_deadline
+
+    if is_urgent:
+        message['is_urgent'] = is_urgent
+
+    if attachments:
+        message['attachments'] = []
+
+        for attachment in attachments:
+            message['attachments'].append({
+                "name": attachment[0],
+                "type": attachment[1],
+                "base64": attachment[2],
+            })
+
+    data = {
+        "contract_id": contract_id,
+        "api_key": APP_KEY,
+        "message": message
+    }
+
+    try:
+        requests.post(MAIN_HOST + '/api/agents/message', json=data)
+    except Exception as e:
+        print('connection error', e)
+
+
 def get_categories():
     data = {
         "api_key": APP_KEY,
@@ -84,5 +137,55 @@ def add_records(contract_id, values, record_time=None):
     print(data)
     try:
         requests.post(MAIN_HOST + '/api/agents/records/add', json=data)
+    except Exception as e:
+        print('connection error', e)
+
+
+def add_task(contract_id, text, number=1, date=None, important=False, action_link=None):
+    data = {
+        "contract_id": contract_id,
+        "api_key": APP_KEY,
+        "text": text,
+        "number": number,
+        "important": important
+    }
+
+    if date:
+        data['date'] = date
+
+    if action_link:
+        data['action_link'] = action_link
+
+    try:
+        answer = requests.post(MAIN_HOST + '/api/agents/tasks/add', json=data).json()
+        return answer['task_id']
+    except Exception as e:
+        print('connection error', e)
+
+
+def make_task(contract_id, task_id):
+    data = {
+        "contract_id": contract_id,
+        "api_key": APP_KEY,
+        "task_id": task_id,
+    }
+
+    try:
+        answer = requests.post(MAIN_HOST + '/api/agents/tasks/done', json=data).json()
+        return answer['is_done']
+
+    except Exception as e:
+        print('connection error', e)
+
+
+def delete_task(contract_id, task_id):
+    data = {
+        "contract_id": contract_id,
+        "api_key": APP_KEY,
+        "task_id": task_id,
+    }
+
+    try:
+        requests.post(MAIN_HOST + '/api/agents/tasks/delete', json=data)
     except Exception as e:
         print('connection error', e)
