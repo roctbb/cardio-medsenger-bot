@@ -157,7 +157,9 @@ def add_task(contract_id, text, number=1, date=None, important=False, action_lin
         data['action_link'] = action_link
 
     try:
-        answer = requests.post(MAIN_HOST + '/api/agents/tasks/add', json=data).json()
+        response = requests.post(MAIN_HOST + '/api/agents/tasks/add', json=data)
+        print(response)
+        answer = response.json()
         return answer['task_id']
     except Exception as e:
         print('connection error', e)
