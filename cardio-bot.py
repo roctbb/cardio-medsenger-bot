@@ -398,7 +398,7 @@ def check_params(contract_id, scenario, data):
         warnings = []
         criteria1 = int(data.get('fibrillation1', 1))
         if criteria1 == 2:
-            warnings.append("выраженные симптомы")
+            warnings.append("выраженные симптомы без нарушения нормальной жизнедеятельности")
         if criteria1 == 3:
             warnings.append("выраженные симптомы c нарушением нормальной жизнедеятельности")
 
