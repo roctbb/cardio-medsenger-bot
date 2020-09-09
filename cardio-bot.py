@@ -236,7 +236,7 @@ def send_warning(contract_id, a, scenario):
 
     try:
         send_message(contract_id,
-                     text="По итогам опроса и монитринга у вас налюдаются следующие симптомы {}: {}\n\nМы направили уведомление о симптомах вашему лечащему врачу, он свяжется с вами в ближайшее время.".format(diagnosis, '\n - '.join(a)),
+                     text="По итогам опроса и мониторинга у вас налюдаются следующие симптомы {}:\n - {}\n\nМы направили уведомление о симптомах вашему лечащему врачу, он свяжется с вами в ближайшее время.".format(diagnosis, '\n - '.join(a)),
                      is_urgent=True, only_patient=True)
         send_message(contract_id, text="У пациента наблюдаются симптомы {} ({}).".format(diagnosis, ' / '.join(a)),
                      is_urgent=True, only_doctor=True, need_answer=True)
