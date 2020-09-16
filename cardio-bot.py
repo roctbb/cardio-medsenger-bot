@@ -129,7 +129,7 @@ def init():
         return "error"
 
     print('sending ok')
-    delayed(1, sender, [])
+    delayed(1, send_iteration, [])
     return 'ok'
 
 
@@ -243,24 +243,26 @@ def send_warning(contract_id, a, scenario):
     except Exception as e:
         print('connection error', e)
 
+def send_iteration():
+    contracts = Contract.query.all()
+    now = datetime.datetime.now()
+    hour = now.hour
+    for contract in contracts:
+        if hour > 0 and hour < 8 and (time.time() - contract.last_task_push) > (get_delta(contract.mode) - 8 * 60 * 60):
+            print("{}: Init task to {}".format(gts(), contract.id))
+            init_task(contract)
+
+        if contract.last_task_id != None and time.time() - contract.last_push > get_delta(contract.mode):
+            send(contract.id)
+            print("{}: Sending form to {}".format(gts(), contract.id))
+            contract.last_push = int(time.time())
+
+    db.session.commit()
+    time.sleep(60 * 5)
 
 def sender():
     while True:
-        contracts = Contract.query.all()
-        now = datetime.datetime.now()
-        hour = now.hour
-        for contract in contracts:
-            if hour > 0 and hour < 8 and time.time() - contract.last_task_push > get_delta(contract.mode) - 8 * 60 * 60:
-                print("{}: Init task to {}".format(gts(), contract.id))
-                init_task(contract)
-
-            if contract.last_task_id != None and time.time() - contract.last_push > get_delta(contract.mode):
-                send(contract.id)
-                print("{}: Sending form to {}".format(gts(), contract.id))
-                contract.last_push = int(time.time())
-
-        db.session.commit()
-        time.sleep(60 * 5)
+        send_iteration()
 
 
 @app.route('/message', methods=['POST'])
