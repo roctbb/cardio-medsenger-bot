@@ -252,7 +252,7 @@ def send_iteration():
             print("{}: Init task to {}".format(gts(), contract.id))
             init_task(contract)
 
-        if contract.last_task_id != None and time.time() - contract.last_push > get_delta(contract.mode):
+        if hour > 8 and hour < 22 and contract.last_task_id != None and time.time() - contract.last_push > get_delta(contract.mode):
             send(contract.id)
             print("{}: Sending form to {}".format(gts(), contract.id))
             contract.last_push = int(time.time())
