@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Анкета кардиомониторинга</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+          integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        input[type='checkbox'] {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 5px;
+            border: 1px solid gray;
+
+        }
+
+        .form-check label {
+            padding-left: 15px;
+        }
+
+        input[type='checkbox']:checked {
+            background: lightpink;
+        }
+
+        input[type='radio'] {
+            margin: 5px !important;
+        }
+
+        h6 {
+            margin-top: 15px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <div class="container" style="margin-top: 25px;">
+        <h4>Анкета кардиомонитринга</h4>
+
+        <form method="POST" style="margin-top: 25px; font-size: 120%;">
+            <div id="hearthfailure-block" v-if="scenario == 0">
+
+                <div v-if="step == 1">
+                    <h6>За последние 2 недели отмечали ли Вы усиление или появление симптомов, которые ранее Вас не
+                        беспокоили (одышка, повышенная утомляемость, сердцебиение, отеки нижних конечностей)?</h6>
+
+                    <a href="#" class="btn btn-danger" v-on:click="step = 2">Да</a>
+                    <button class="btn btn-success"
+                       onclick="closeSuccess()">Нет</button>
+                </div>
+                <div v-if="step == 2">
+                    <div class="form-check">
+                        <input type="checkbox" name="big1" value="warning" class="form-check-input"><label
+                            class="form-check-label">Появилась одышка при ранее привычной физической нагрузке.</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="big2" value="warning" class="form-check-input"><label
+                            class="form-check-label">Были жалобы на одышку в положение лежа / была необходимость во
+                        время
+                        сна
+                        поднять подушку выше и/или положить больше подушек.</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="big3" value="warning" class="form-check-input"><label
+                            class="form-check-label">Были приступы ночной одышки.</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="big4" value="warning" class="form-check-input"><label
+                            class="form-check-label">Физическая нагрузка давалась тяжелее, чем ранее.</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="big5" value="warning" class="form-check-input"><label
+                            class="form-check-label">Появились слабость, повышенная утомляемость, необходимость в более
+                        продолжительном отдыхе.</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="big6" value="warning" class="form-check-input"><label
+                            class="form-check-label">Отечность голеней, увеличение в объеме лодыжек, появление следов от
+                        носок/обуви.</label>
+                    </div>
+
+                    <hr>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="small1" value="warning" class="form-check-input"><label
+                            class="form-check-label">Беспокоил ли Вас ночной кашель.</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="small2" value="warning" class="form-check-input"><label
+                            class="form-check-label">Чувствовал(а) себя подавленными или апатичными.</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="small3" value="warning" class="form-check-input"><label
+                            class="form-check-label">Беспокоит ли Вас сердцебиение.</label>
+                    </div>
+
+                    <div class="form-check">
+                        <input type="checkbox" name="small4" value="warning" class="form-check-input"><label
+                            class="form-check-label">Не могу задержать дыхание на 30 секунд.</label>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 25px;">
+                        <input type="submit" class="btn-success btn" value="Отправить"/>
+                    </div>
+                </div>
+
+
+            </div>
+
+            <div id="stenocardia-block" v-if="scenario == 1">
+                <h6>Были ли у Вас приступы стенокардии?</h6>
+
+                <div class="radio">
+                    <label><input type="radio" name="stenocardia" value="0" checked>Нет.</label>
+                </div>
+                <div class="radio">
+                    <label><input type="radio" name="stenocardia" value="1">Когда Вы прошли более 500 метров или
+                        поднялись
+                        более чем на 1 этаж.</label>
+                </div>
+                <div class="radio">
+                    <label><input type="radio" name="stenocardia" value="2">Когда Вы прошли менее 500 метров или
+                        поднялись
+                        менее чем на 1 этаж.</label>
+                </div>
+
+                <div class="form-group" style="margin-top: 25px;">
+                    <input type="submit" class="btn-success btn" value="Отправить"/>
+                </div>
+
+            </div>
+
+            <div id="fibrillation-block" v-if="scenario == 2">
+                <h6>Были ли у Вас симптомы заболевания?</h6>
+
+                <div class="radio">
+                    <label><input type="radio" name="fibrillation1" value="0" checked>Cимптомы заболевания
+                        отсутствовали.</label>
+                </div>
+                <div class="radio">
+                    <label><input type="radio" name="fibrillation1" value="1">Симптомы заболевания в легкой форме,
+                        обычная
+                        жизнедеятельность была не нарушена.</label>
+                </div>
+                <div class="radio">
+                    <label><input type="radio" name="fibrillation1" value="2">Симптомы заболевания были выраженными,
+                        обычная
+                        жизнедеятельность была не нарушена.</label>
+                </div>
+                <div class="radio">
+                    <label><input type="radio" name="fibrillation1" value="3">Нормальная жизнедеятельность была
+                        невозможна
+                        из-за симптомов заболевания.</label>
+                </div>
+
+                <h6>Признаки кровотечений?</h6>
+
+                <div class="radio">
+                    <label><input type="radio" name="fibrillation2" value="0" checked>Незначительные (синяки, носовые
+                        быстро
+                        останавливающиеся и др).</label>
+                </div>
+                <div class="radio">
+                    <label><input type="radio" name="fibrillation2" value="1">Легкой степени (из носа или других
+                        органов)
+                        без существенной потери крови.</label>
+                </div>
+                <div class="radio">
+                    <label><input type="radio" name="fibrillation2" value="2">Более тяжелые.</label>
+                </div>
+
+                <div class="form-group" style="margin-top: 25px;">
+                    <input type="submit" class="btn-success btn" value="Отправить"/>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+<script>
+    function closeSuccess()
+    {
+        window.parent.postMessage('close-modal-success','*');
+    }
+
+    Vue.config.delimiters = ['[[', ']]']
+    var app = new Vue({
+        el: '#app',
+        data: {
+            step: 1,
+            scenario: {{ scenario }}
+        }
+    });
+</script>
+</body>
+</html>
