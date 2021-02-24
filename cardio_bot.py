@@ -449,4 +449,5 @@ def action_save():
 t = Thread(target=sender)
 t.start()
 
-app.run(port=PORT, host=HOST)
+if __name__ == "__main__":
+    app.run(port=PORT, host=HOST)
