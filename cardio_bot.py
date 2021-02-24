@@ -26,8 +26,8 @@ class Contract(db.Model):
 
 try:
     db.create_all()
-except:
-    print('cant create structure')
+except Exception as e:
+    print('cant create structure', e)
 
 
 def get_delta(mode):
