@@ -243,7 +243,8 @@ def send_warning(contract_id, a, scenario):
     except Exception as e:
         print('connection error', e)
 
-def send_iteration():
+def tasks():
+    print('running tasks')
     contracts = Contract.query.all()
     now = datetime.datetime.now()
     hour = now.hour
@@ -258,11 +259,6 @@ def send_iteration():
             contract.last_push = int(time.time())
 
     db.session.commit()
-    time.sleep(60 * 5)
-
-def sender():
-    while True:
-        send_iteration()
 
 
 @app.route('/message', methods=['POST'])
@@ -445,9 +441,6 @@ def action_save():
             <strong>Спасибо, окно можно закрыть</strong><script>window.parent.postMessage('close-modal-success','*');</script>
             """
 
-
-t = Thread(target=sender)
-t.start()
 
 if __name__ == "__main__":
     app.run(port=PORT, host=HOST)
