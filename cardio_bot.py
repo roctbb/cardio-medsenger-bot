@@ -129,7 +129,7 @@ def init():
         return "error"
 
     print('sending ok')
-    delayed(1, send_iteration, [])
+    delayed(1, tasks, [])
     return 'ok'
 
 
