@@ -129,7 +129,7 @@ def init():
         return "error"
 
     print('sending ok')
-    delayed(1, tasks, [])
+    tasks()
     return 'ok'
 
 
@@ -383,13 +383,12 @@ def check_params(contract_id, scenario, data):
         # send warning
         if len(big_warnings) > 0 or len(small_warnings) > 1:
             warnings = big_warnings + small_warnings
-            delayed(1, send_warning, [contract_id, warnings, scenario])
+            send_warning(contract_id, warnings, scenario)
 
     elif scenario == 1:
         criteria = int(data.get('stenocardia', 1))
         if criteria == 2:
-            delayed(1, send_warning,
-                    [contract_id, ["стенокардия при небольшой физической нагрузке"], scenario])
+            send_warning(contract_id, ["стенокардия при небольшой физической нагрузке"], scenario)
 
         report.append(("stenocardia_claim_1", criteria))
     else:
@@ -409,9 +408,9 @@ def check_params(contract_id, scenario, data):
         report.append(("fibrillation_claim_2", criteria2))
 
         if len(warnings) > 0:
-            delayed(1, send_warning, [contract_id, warnings, scenario])
+            send_warning(contract_id, warnings, scenario)
 
-    delayed(1, add_records, [contract_id, report])
+    add_records(contract_id, report)
 
 
 @app.route('/frame', methods=['POST'])
@@ -433,7 +432,7 @@ def action_save():
 
     db.session.commit()
 
-    delayed(1, check_params, (contract.id, contract.scenario, request.form))
+    check_params(contract.id, contract.scenario, request.form)
 
     print("{}: Form from {}".format(gts(), contract_id))
 
